@@ -9,9 +9,9 @@ Inside are
  - and 2 buttons
 
 One can raise or lower the current moodlevel by hitting the + or - button respectively.
-If it reaches 16 it turns all rainbowy and the bar goes doomsday red gloomy on -1.
+If it reaches 15 it turns all rainbowy and the bar goes doomsday red gloomy on -1.
 
-It is not compicated, the code is super straight forward and was hacked together in half an hour after a beer so don't expect some wizardry in here.
+It is not complicated, the code is super straight forward and was hacked together in half an hour after a beer so don't expect some wizardry in here.
 
 
 TODO:
