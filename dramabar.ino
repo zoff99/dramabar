@@ -2,9 +2,12 @@
 #include "SPI.h" // Comment out this line if using Trinket or Gemma
 
 
-unsigned long expTime = 3600000;    //Time in ms for mood expiration (eg: every X ms mood goes 1 point nearer to normal)
-unsigned long now = 0;              //Time in ms now (measured from boot)
-unsigned long t_prev = 0;           //Time in ms, from last run of loop
+unsigned long expTime = 3600000;              //Time in ms for mood expiration (eg: every X ms mood goes 1 point nearer to normal)
+unsigned long expButton = 10000;              //Time in ms in which all button presses after the first one get ignored
+unsigned long now = 0, button_now = 0;        //Time in ms now (measured from boot), once for mood expiration, once for button timeout
+unsigned long prev = 0, button_prev = 0;    //Time in ms, from last run of loop, t_prev for mood, button_prev for button timeout
+
+bool stopAnim = true;         //Dictates, wether the button fading animation should be stopped for [expButton]ms after a button press or not
 
 int ledPin1 = 6;    // LED connected to digital pin 9
 int buttonPin1 = A5;
@@ -15,7 +18,7 @@ int buttonPin2 = A4;
 
 
 int currentpos = 7;
-int lastpos = currentpos;
+//int lastpos = currentpos;   //This line seems to be useless, since lastpos seems to be never used
 
 
 
@@ -67,7 +70,8 @@ void loop() {
 
 
   // check if button was pressed
-  if (!digitalRead(buttonPin1))
+  button_now = millis();
+  if (!digitalRead(buttonPin1) && tdelta(button_now, button_prev) > expButton)
   {
     if (currentpos == -1) return;
     /*strip.setPixelColor(currentpos, Color(0, 255, 0));
@@ -76,11 +80,11 @@ void loop() {
     strip.show();*/
     mood_dn();
     while (!digitalRead(buttonPin1)) {}
-    delay(10000);
-
+    button_prev = button_now;
+    //delay(10000);
   }
 
-  if (!digitalRead(buttonPin2))
+  if (!digitalRead(buttonPin2) && tdelta(button_now, button_prev) > expButton)
   {
     if (currentpos == 15) return;
     /*strip.setPixelColor(currentpos, Color(255, 0, 0));
@@ -89,25 +93,30 @@ void loop() {
     strip.show();*/
     mood_up();
     while (!digitalRead(buttonPin2)) {}
-    delay(10000);
-
-    now = millis();
-    if (tdelta() > expTime && currentpos != 7) {
-      t_prev = now;
-
-    }
+    button_prev = button_now;
+    //delay(10000);
+  }
+  
+  now = millis();
+  if (tdelta(now, prev) >= expTime && currentpos != 7) {
+    prev = now;
+    normalizeMood();
   }
 
-  fadeLed(ledPin1);
-  fadeLed(ledPin2);
+  if (stopAnim && tdelta(button_now, button_prev) <= expButton) {
+    return;
+  } else {
+    fadeLed(ledPin1);
+    fadeLed(ledPin2);
+  }
 
 }
 
-unsigned long tdelta () {
-  if (now > t_prev) {
-    return now - t_prev;
+unsigned long tdelta (unsigned long t_now, unsigned long t_prev) {
+  if (t_now > t_prev) {
+    return t_now - t_prev;
   }
-  return sizeof(unsigned int) - t_prev + now;
+  return sizeof(unsigned long) - t_prev + t_now;
 }
 
 void normalizeMood () {
@@ -117,7 +126,6 @@ void normalizeMood () {
   else if (currentpos < 7) {
     mood_up();
   }
-
 }
 
 void mood_up () {
