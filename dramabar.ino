@@ -2,25 +2,45 @@
 #include "limits.h"
 #include "SPI.h" // Comment out this line if using Trinket or Gemma
 
+//SETTINGS BEGIN
+#define BUTTONS_ANIMATE 0
+
 #define REDFADE_SPEED 10
-#define BUTTONFADE_SPEED 40
+#define BUTTONFADE_SPEED 50    //this value seems to have to be higher than the others, I think this is because the PWM output of the microcontroller doesn't update that often
 #define RAINBOW_SPEED 10
+
+#define BUTTON_LIGHT_BORDER_UP 255    //intensity of the button light (upper border). possible values: 0-255
+#define BUTTON_LIGHT_BORDER_DOWN 50   //intensity of the button light (lower border). possible values: 0-255. ATTENTION: UPPER BORDER __MUST__ BE HIGHER THAN LOWER BORDER
+
+#define REDFADE_BORDER_UP 255         //see BUTTON_LIGHT_BORDER_UP for more information
+#define REDFADE_BORDER_DOWN 30        //see BUTTON_LIGHT_BORDER_DOWN for more information
 
 #define METALED true        //corrects the issue that the dramabar seems to have GRB instead of RGB LEDs
 
-#define DEBUG false       //defines if the debug version should be used (shortened cooldowns so that everything happens a bit faster for testing purposes)
+#define DEBUG false         //defines if the debug version should be used (shortened cooldowns so that everything happens a bit faster for testing purposes)
 #if DEBUG
-unsigned long expTime = 5000;
-unsigned long expButton = 1000;
+unsigned long expTime = 5000;                 //see further down for explanation
+unsigned long expButton = 1000;               //see further down for explanation
 #else
-unsigned long expTime = 270000;              //Time in ms for mood expiration (eg: every X ms mood goes 1 point nearer to normal)
+unsigned long expTime = 2700000;               //Time in ms for mood expiration (eg: every X ms mood goes 1 point nearer to normal)
 unsigned long expButton = 10000;              //Time in ms in which all button presses after the first one get ignored
 #endif
 
-unsigned long now = 0;        //Time in ms now (measured from boot)
+unsigned long now = 0;                                //Time in ms now (measured from boot). Used for all the timeouts and waiting stuff
 unsigned long prev_normalize = 0, button_prev = 0;    //Time in ms, from last run of loop, t_prev_normalize for mood, button_prev_normalize for button timeout
 
-bool stopAnim = false;         //Dictates, wether the button fading animation should be stopped for [expButton]ms after a button press or not
+bool stopAnim = true;         //Dictates, wether the button fading animation should be stopped for [expButton]ms after a button press or not
+
+//forward declaration
+uint32_t Color(byte r, byte g, byte b);
+
+//defines the colors with wich the mood bar should work. ATTENTION! The redFade function does NOT change with these settings, it will still fade red and NOT fade the defined colorSad
+uint32_t colorHappy = Color(0, 255, 0);
+uint32_t colorSad = Color(255, 0, 0);
+uint32_t colorCursor = Color(255, 255, 255);
+//SETTINGS END
+
+
 
 int ledPin1 = 6;    // LED connected to digital pin 6
 int buttonPin1 = A5;
@@ -43,16 +63,21 @@ void setup() {
   pinMode(buttonPin1, INPUT_PULLUP);
   pinMode(buttonPin2, INPUT_PULLUP);
 
+  pinMode(ledPin1, OUTPUT);
+  digitalWrite(ledPin1, HIGH);
+  pinMode(ledPin2, OUTPUT);
+  digitalWrite(ledPin2, HIGH);
+
   init_display();
   now = millis();
-
-  Serial.begin(9600);
 }
 
 void loop() {
+  //Initialize variables
   static int8_t currentPos = 7;
-  static bool drama = false;
+  static bool drama = false;  //drama == true makes the red part of the mood bar blink
 
+  //For the extreme moods
   if (currentPos == 15) {
     rainbowCycle(random(10, 20));
   }
@@ -60,40 +85,50 @@ void loop() {
     redFade(0);
   }
 
-  // check if button was pressed
+  // check if button was pressed and if there was enough delay since the last button press
   now = millis();
   if (!digitalRead(buttonPin2) && tdelta(now, button_prev) > expButton) {
     button_prev = now;
+    //resets some of the time for the mood normalization, so that it won't normalize shortly after a manual mood change (expTime / 9 equals to 5 min for the default 45min expiration time)
+    //the  if  checks, that at least half of the expiration timer has to be expired so that it won't trigger the "pseudo overflow bug" (see at tdelta for more information)
     if (tdelta(now, prev_normalize) > expTime/2) {
-      prev_normalize += expTime / 6;
+      prev_normalize += expTime / 9;
     }
     if (currentPos == 15) return;
+    //increases the mood bar by 1
     currentPos = mood_up(currentPos);
   }
   else if (!digitalRead(buttonPin1) && tdelta(now, button_prev) > expButton) {
     button_prev = now;
+    //resets some of the time for the mood normalization, so that it won't normalize shortly after a manual mood change (expTime / 9 equals to 5 min for the default 45min expiration time)
+    //the  if  checks, that at least half of the expiration timer has to be expired so that it won't trigger the "pseudo overflow bug" (see at tdelta for more information)
     if (tdelta(now, prev_normalize) > expTime/2) {
-      prev_normalize += expTime / 6;
+      prev_normalize += expTime / 9;
     }
     if (currentPos == -1) return;
+    //reduces the mood bar by 1
     currentPos = mood_dn(currentPos);
   }
 
+  //resets mood normalization, so that it won't normalize instantly after leaving the neutral state (currentPos == 7)
   if (currentPos == 7) {
     prev_normalize = now;
   }
 
+  //normalizes the mood if enough time has passed after the last normalization (default 45min, this can be delayed by pressing buttons, since this resets this time by expTime/9, which is 5min for 45min expTime
   now = millis();
   if (tdelta(now, prev_normalize) >= expTime && currentPos != 7) {
     prev_normalize = now;
     currentPos = normalizeMood(currentPos);
   }
 
+  //if drama is true, the red part of the mood bar will start to blink - this won't be visible when mood is -1 or 15, since the occuring animations at those points overrule the blinking
   if (drama) {
     redFade(currentPos + 1);
   }
 
-  if (stopAnim && tdelta(now, button_prev) <= expButton) {
+  //animates the buttons, stopAnim dictates whether the animation should stop during the (default) 10sec button inactivity after a button press
+  if ((stopAnim && tdelta(now, button_prev) <= expButton) || !BUTTONS_ANIMATE) {
     return;
   } else {
     fadeLed(ledPin1);
@@ -103,6 +138,10 @@ void loop() {
 }
 
 //Time functions
+/*tdelta calculates the delta time between now and previous (t_now, t_prev). It has a overflow prevention, since the millis() variable (ulong) overflows every ~50 days. In that case the calculation gets changed so that the overflow doesn't change the elapsed time
+the correction gets called if the PREVIOUS time is higher than NOW. Because of that there is a chance of a "pseudo overflow bug", in which the function thinks, that an overflow happened, but it didn't (only happens when either now or prev gets changed manually
+which is the case if a button press occurs, since the button press changes the prev_normalize value, so that the next normalization happens later. But when prev's value is to close too now's value, this can trigger the bug. Because of this, there is a  if  which
+checks if enough time is between now and prev*/
 unsigned long tdelta (unsigned long t_now, unsigned long t_prev) {
   if (t_now >= t_prev) {
     return t_now - t_prev;
@@ -112,8 +151,8 @@ unsigned long tdelta (unsigned long t_now, unsigned long t_prev) {
 //Time functions end
 
 //Mood Functions
+//normalizes the mood
 int8_t normalizeMood (int8_t currentPos) {
-  Serial.println("normalized mood");
   if (currentPos > 7) {
     currentPos = mood_dn(currentPos);
   }
@@ -123,58 +162,66 @@ int8_t normalizeMood (int8_t currentPos) {
   return currentPos;
 }
 
+//increases the mood bar by one
 int8_t mood_up (int8_t currentPos) {
   if (currentPos == -1) {
-    resetRed();
+    resetSadColor();
   }
-  strip.setPixelColor(currentPos, Color(0, 255, 0));
+  strip.setPixelColor(currentPos, colorHappy);
   ++currentPos;
-  strip.setPixelColor(currentPos, Color(255, 255, 255));
+  strip.setPixelColor(currentPos, colorCursor);
   strip.show();
   return currentPos;
 }
 
+//decreases the mood bar by one
 int8_t mood_dn (int8_t currentPos) {
   if (currentPos == 15) {
-    resetGreen();
+    resetHappyColor();
   }
-  strip.setPixelColor(currentPos, Color(255, 0, 0));
+  strip.setPixelColor(currentPos, colorSad);
   --currentPos;
-  strip.setPixelColor(currentPos, Color(255, 255, 255));
+  strip.setPixelColor(currentPos, colorCursor);
   strip.show();
   return currentPos;
 }
 //Mood Functions end
 
 //LED functions
+//initializes the display
 void init_display() {
+  //changes the LED color from all LEDs from middle to top to red (red part of neutral mood)
   for (int i = strip.numPixels() / 2; i < strip.numPixels(); ++i) {
-    strip.setPixelColor(i, Color(255, 0, 0));
+    strip.setPixelColor(i, colorSad);
   }
+  //changes the LED color from all LEDs from beginning to middle to green (green part of neutral mood)
   for (int i = 0; i < strip.numPixels() / 2; ++i) {
-    strip.setPixelColor(i, Color(0, 255, 0));
+    strip.setPixelColor(i, colorHappy);
   }
-  strip.setPixelColor(strip.numPixels() / 2, Color(255, 255, 255));
+  //sets the white LED in the middle for the cursor
+  strip.setPixelColor(strip.numPixels() / 2, colorCursor);
 
   strip.show();
 }
 
-void resetGreen() {
+//sets all pixels to the defined happy color
+void resetHappyColor() {
   for (int i = 0; i < strip.numPixels(); i++) {
-    strip.setPixelColor(i, Color(0, 255, 0));
+    strip.setPixelColor(i, colorHappy);
   }
   strip.show();   // write all the pixels out
 }
 
-void resetRed() {
+//sets all pixels to the defined sad color
+void resetSadColor() {
   for (int i = 0; i < strip.numPixels(); i++) {
-    strip.setPixelColor(i, Color(255, 0, 0));
+    strip.setPixelColor(i, colorSad);
   }
   strip.show();   // write all the pixels out
 }
 
 //LED FX functions
-//when startpos = 0 everything fades red, other startpositions for dramamode (where only the red mood part blinks)
+//when startpos = 0 everything fades red (which is used for doomsday mood which is currentPos == -1), other startpositions for dramamode (where only the red mood part blinks)
 void redFade (int8_t currentPos) {
   static unsigned long prev_fade = 0;
   static bool up = true;
@@ -186,12 +233,12 @@ void redFade (int8_t currentPos) {
   }
 
   prev_fade = now;
-  if (up) {
+  if (up) { //fade in
     for (int i = currentPos; i < strip.numPixels(); ++i) {
       strip.setPixelColor(i, Color(j, 0, 0));
     }
     ++j;
-  } else {
+  } else {  //fade out
     for (int i = currentPos; i < strip.numPixels(); ++i) {
       strip.setPixelColor(i, Color(j, 0, 0));
     }
@@ -199,10 +246,11 @@ void redFade (int8_t currentPos) {
   }
   strip.show();
 
-  if (j >= 255) {
+  //changes direction of fading on all of the borders
+  if (j >= REDFADE_BORDER_UP) {
     up = false; 
   }
-  else if (j <= 30) {
+  else if (j <= REDFADE_BORDER_DOWN) {
     up = true;
   }
 }
@@ -210,7 +258,7 @@ void redFade (int8_t currentPos) {
 //fades the buttons
 void fadeLed(uint8_t ledPin) {
   static unsigned long prev_fade = 0;
-  static uint8_t fadeValue = 30;
+  static uint8_t fadeValue = BUTTON_LIGHT_BORDER_DOWN;
   static bool fadeIn = true;
 
   now = millis();
@@ -219,18 +267,19 @@ void fadeLed(uint8_t ledPin) {
   }
   
   prev_fade = now;
-  if (fadeIn) {
+  if (fadeIn) { //fade in 
     analogWrite(ledPin, fadeValue);
-    fadeValue += 1;
-  } else {
+    fadeValue += 3;
+  } else {      //fade out
     analogWrite(ledPin, fadeValue);
-    fadeValue -= 1;
+    fadeValue -= 3;
   }
 
-  if (fadeValue >= 255) {
+  //changes direction of fading on the borders
+  if (fadeValue >= BUTTON_LIGHT_BORDER_UP) {
     fadeIn = false;
   }
-  else if (fadeValue <= 30) {
+  else if (fadeValue <= BUTTON_LIGHT_BORDER_DOWN) {
     fadeIn = true;
   }
 }
@@ -262,9 +311,7 @@ void rainbowCycle(uint8_t wait) {
 // fill the dots one after the other with said color
 // good for testing purposes
 void colorWipe(uint32_t c, uint8_t wait) {
-  int i;
-
-  for (i = 0; i < strip.numPixels(); i++) {
+  for (int i = 0; i < strip.numPixels(); i++) {
     strip.setPixelColor(i, c);
     strip.show();
     delay(wait);
@@ -273,7 +320,7 @@ void colorWipe(uint32_t c, uint8_t wait) {
 //LED FX end
 
 // Helper functions
-// Create a 24 bit color value from R,G,B
+// Create a 24 bit color value from R,G,B, defined METALED value defines if normal RGB mode should be used for that, or if GRB should be used (the dramabar in metalab apparently has GRB LEDs
 uint32_t Color(byte r, byte g, byte b)
 {
   uint32_t c;
