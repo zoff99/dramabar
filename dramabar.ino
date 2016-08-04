@@ -3,7 +3,9 @@
 #include "SPI.h" // Comment out this line if using Trinket or Gemma
 
 //SETTINGS BEGIN
-#define BUTTONS_ANIMATE 0
+#define BUTTONS_ANIMATE 0     //whether the buttons should animate in EVER. Leave this to 0 until you somehow fix the animations, because they are SH*T right now
+#define stopAnim 1;         //Dictates, wether the button fading animation should be stopped for [expButton]ms after a button press or not
+
 
 #define REDFADE_SPEED 10
 #define BUTTONFADE_SPEED 50    //this value seems to have to be higher than the others, I think this is because the PWM output of the microcontroller doesn't update that often
@@ -29,7 +31,6 @@ unsigned long expButton = 10000;              //Time in ms in which all button p
 unsigned long now = 0;                                //Time in ms now (measured from boot). Used for all the timeouts and waiting stuff
 unsigned long prev_normalize = 0, button_prev = 0;    //Time in ms, from last run of loop, t_prev_normalize for mood, button_prev_normalize for button timeout
 
-bool stopAnim = true;         //Dictates, wether the button fading animation should be stopped for [expButton]ms after a button press or not
 
 //forward declaration
 uint32_t Color(byte r, byte g, byte b);
