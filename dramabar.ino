@@ -3,7 +3,7 @@
 #include "SPI.h" // Comment out this line if using Trinket or Gemma
 
 #define REDFADE_SPEED 10
-#define BUTTONFADE_SPEED 10
+#define BUTTONFADE_SPEED 40
 #define RAINBOW_SPEED 10
 
 #define METALED true        //corrects the issue that the dramabar seems to have GRB instead of RGB LEDs
@@ -13,7 +13,7 @@
 unsigned long expTime = 5000;
 unsigned long expButton = 1000;
 #else
-unsigned long expTime = 3600000;              //Time in ms for mood expiration (eg: every X ms mood goes 1 point nearer to normal)
+unsigned long expTime = 270000;              //Time in ms for mood expiration (eg: every X ms mood goes 1 point nearer to normal)
 unsigned long expButton = 10000;              //Time in ms in which all button presses after the first one get ignored
 #endif
 
@@ -22,10 +22,10 @@ unsigned long prev_normalize = 0, button_prev = 0;    //Time in ms, from last ru
 
 bool stopAnim = false;         //Dictates, wether the button fading animation should be stopped for [expButton]ms after a button press or not
 
-int ledPin1 = 6;    // LED connected to digital pin 9
+int ledPin1 = 6;    // LED connected to digital pin 6
 int buttonPin1 = A5;
 
-int ledPin2 = 3;    // LED connected to digital pin 9
+int ledPin2 = 3;    // LED connected to digital pin 3
 int buttonPin2 = A4;
 
 // Don't forget to connect the ground wire to Arduino ground,
@@ -40,12 +40,8 @@ void setup() {
   // Update LED contents, to start they are all 'off'
   strip.show();
 
-
   pinMode(buttonPin1, INPUT_PULLUP);
   pinMode(buttonPin2, INPUT_PULLUP);
-
-  //attachInterrupt(digitalPinToInterrupt(buttonPin1), buttonPressed, CHANGE);
-  //attachInterrupt(digitalPinToInterrupt(buttonPin2), buttonPressed, CHANGE);
 
   init_display();
   now = millis();
@@ -68,17 +64,24 @@ void loop() {
   now = millis();
   if (!digitalRead(buttonPin2) && tdelta(now, button_prev) > expButton) {
     button_prev = now;
-    //prev_normalize += expTime / 6;
+    if (tdelta(now, prev_normalize) > expTime/2) {
+      prev_normalize += expTime / 6;
+    }
     if (currentPos == 15) return;
     currentPos = mood_up(currentPos);
   }
   else if (!digitalRead(buttonPin1) && tdelta(now, button_prev) > expButton) {
     button_prev = now;
-    //prev_normalize += expTime / 6;
+    if (tdelta(now, prev_normalize) > expTime/2) {
+      prev_normalize += expTime / 6;
+    }
     if (currentPos == -1) return;
     currentPos = mood_dn(currentPos);
   }
 
+  if (currentPos == 7) {
+    prev_normalize = now;
+  }
 
   now = millis();
   if (tdelta(now, prev_normalize) >= expTime && currentPos != 7) {
@@ -101,7 +104,7 @@ void loop() {
 
 //Time functions
 unsigned long tdelta (unsigned long t_now, unsigned long t_prev) {
-  if (t_now > t_prev) {
+  if (t_now >= t_prev) {
     return t_now - t_prev;
   }
   return ULONG_MAX - t_prev + t_now;
@@ -197,7 +200,7 @@ void redFade (int8_t currentPos) {
   strip.show();
 
   if (j >= 255) {
-    up = false;
+    up = false; 
   }
   else if (j <= 30) {
     up = true;
@@ -207,22 +210,30 @@ void redFade (int8_t currentPos) {
 //fades the buttons
 void fadeLed(uint8_t ledPin) {
   static unsigned long prev_fade = 0;
-  static uint8_t fadeValue = 0;
+  static uint8_t fadeValue = 30;
   static bool fadeIn = true;
 
+  now = millis();
   if (tdelta(now, prev_fade) < BUTTONFADE_SPEED) {
     return;
   }
-
+  
+  prev_fade = now;
   if (fadeIn) {
     analogWrite(ledPin, fadeValue);
-    ++prev_fade;
+    fadeValue += 1;
   } else {
     analogWrite(ledPin, fadeValue);
-    --prev_fade;
+    fadeValue -= 1;
+  }
+
+  if (fadeValue >= 255) {
+    fadeIn = false;
+  }
+  else if (fadeValue <= 30) {
+    fadeIn = true;
   }
 }
-
 
 // Slightly different, this one makes the rainbow wheel equally distributed
 // along the chain
@@ -286,7 +297,8 @@ uint32_t Color(byte r, byte g, byte b)
 
 //Input a value 0 to 255 to get a color value.
 //The colours are a transition r - g -b - back to r
-uint32_t Wheel(uint8_t WheelPos) {
+uint32_t Wheel(uint8_t WheelPos)
+{
   if (WheelPos < 85) {
     return Color(WheelPos * 3, 255 - WheelPos * 3, 0);
   } else if (WheelPos < 170) {
