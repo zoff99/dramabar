@@ -4,7 +4,7 @@
 
 //SETTINGS BEGIN
 #define BUTTONS_ANIMATE 0     //whether the buttons should animate in EVER. Leave this to 0 until you somehow fix the animations, because they are SH*T right now
-#define stopAnim 1;         //Dictates, wether the button fading animation should be stopped for [expButton]ms after a button press or not
+#define STOPANIM 1            //Dictates, whether the button fading animation should be stopped for [expButton]ms after a button press or not
 
 
 #define REDFADE_SPEED 10
@@ -13,6 +13,7 @@
 
 #define BUTTON_LIGHT_BORDER_UP 255    //intensity of the button light (upper border). possible values: 0-255
 #define BUTTON_LIGHT_BORDER_DOWN 50   //intensity of the button light (lower border). possible values: 0-255. ATTENTION: UPPER BORDER __MUST__ BE HIGHER THAN LOWER BORDER
+#define BUTTON_OFF_INACT 0            //Dictates, whether the button light should be off during it being inactive, or only off during the button being pushed
 
 #define REDFADE_BORDER_UP 255         //see BUTTON_LIGHT_BORDER_UP for more information
 #define REDFADE_BORDER_DOWN 30        //see BUTTON_LIGHT_BORDER_DOWN for more information
@@ -96,8 +97,9 @@ void loop() {
       prev_normalize += expTime / 9;
     }
     if (currentPos == 15) return;
-    //increases the mood bar by 1
     currentPos = mood_up(currentPos);
+    //Turns the button light off while it is being pushed
+    digitalWrite(ledPin2, LOW);
   }
   else if (!digitalRead(buttonPin1) && tdelta(now, button_prev) > expButton) {
     button_prev = now;
@@ -107,8 +109,9 @@ void loop() {
       prev_normalize += expTime / 9;
     }
     if (currentPos == -1) return;
-    //reduces the mood bar by 1
     currentPos = mood_dn(currentPos);
+    //Turns the button light off while it is being pushed
+    digitalWrite(ledPin1, LOW);
   }
 
   //resets mood normalization, so that it won't normalize instantly after leaving the neutral state (currentPos == 7)
@@ -128,21 +131,29 @@ void loop() {
     redFade(currentPos + 1);
   }
 
-  //animates the buttons, stopAnim dictates whether the animation should stop during the (default) 10sec button inactivity after a button press
-  if ((stopAnim && tdelta(now, button_prev) <= expButton) || !BUTTONS_ANIMATE) {
+  //animates the buttons, STOPANIM dictates whether the fading should stop during the (default) 10sec button inactivity after a button press
+  if ((STOPANIM && tdelta(now, button_prev) <= expButton) || !BUTTONS_ANIMATE) {
     return;
   } else {
     fadeLed(ledPin1);
     fadeLed(ledPin2);
   }
 
+  //Sets the button lights to on while not being pressed, or while not being pressed and not inactive (dictated by BUTTON_OFF_INACT)
+  if (digitalRead(buttonPin2) && (tdelta(now, button_prev) > expButton || !BUTTON_OFF_INACT)) {
+    digitalWrite(ledPin2, HIGH);
+  }
+  if (digitalRead(buttonPin1) && (tdelta(now, button_prev) > expButton || !BUTTON_OFF_INACT)) {
+    digitalWrite(ledPin1, HIGH);
+  }
 }
 
 //Time functions
-/*tdelta calculates the delta time between now and previous (t_now, t_prev). It has a overflow prevention, since the millis() variable (ulong) overflows every ~50 days. In that case the calculation gets changed so that the overflow doesn't change the elapsed time
-the correction gets called if the PREVIOUS time is higher than NOW. Because of that there is a chance of a "pseudo overflow bug", in which the function thinks, that an overflow happened, but it didn't (only happens when either now or prev gets changed manually
-which is the case if a button press occurs, since the button press changes the prev_normalize value, so that the next normalization happens later. But when prev's value is to close too now's value, this can trigger the bug. Because of this, there is a  if  which
-checks if enough time is between now and prev*/
+/* tdelta calculates the delta time between now and previous (t_now, t_prev). It has a overflow prevention, since the millis() variable (ulong) overflows every ~50 days.
+ * In that case the calculation gets changed so that the overflow doesn't change the elapsed time. The correction gets called if the PREVIOUS time is higher than NOW.
+ * Because of that there is a chance of a "pseudo overflow bug", in which the function thinks, that an overflow happened, but it didn't (only happens when either now or
+ * prev gets changed manually, which is the case if a button press occurs, since the button press changes the prev_normalize value, so that the next normalization happens
+ * later. But when prev's value is too close to now's value, this can trigger the bug. I prevented this from happening via an  if  but if some values get changed it could happen again*/
 unsigned long tdelta (unsigned long t_now, unsigned long t_prev) {
   if (t_now >= t_prev) {
     return t_now - t_prev;
@@ -191,15 +202,15 @@ int8_t mood_dn (int8_t currentPos) {
 //LED functions
 //initializes the display
 void init_display() {
-  //changes the LED color from all LEDs from middle to top to red (red part of neutral mood)
+  //changes the LED color from all LEDs from middle to top to defined sad color (sad part of neutral mood)
   for (int i = strip.numPixels() / 2; i < strip.numPixels(); ++i) {
     strip.setPixelColor(i, colorSad);
   }
-  //changes the LED color from all LEDs from beginning to middle to green (green part of neutral mood)
+  //changes the LED color from all LEDs from beginning to middle to happy color (happy part of neutral mood)
   for (int i = 0; i < strip.numPixels() / 2; ++i) {
     strip.setPixelColor(i, colorHappy);
   }
-  //sets the white LED in the middle for the cursor
+  //sets the LED in the middle for the cursor in the defined cursor color
   strip.setPixelColor(strip.numPixels() / 2, colorCursor);
 
   strip.show();
@@ -256,7 +267,7 @@ void redFade (int8_t currentPos) {
   }
 }
 
-//fades the buttons
+//fades the buttons   ---CURRENTLY VERY SHITTY! Fading is very laggy
 void fadeLed(uint8_t ledPin) {
   static unsigned long prev_fade = 0;
   static uint8_t fadeValue = BUTTON_LIGHT_BORDER_DOWN;
@@ -300,7 +311,7 @@ void rainbowCycle(uint8_t wait) {
   for (int i = 0; i < strip.numPixels(); i++) {
     /*tricky math! we use each pixel as a fraction of the full 96-color wheel
       (thats the i / strip.numPixels() part)
-      Then add in j which makes the colors go around per pixel
+      Then add in rainbow_pos which makes the colors go around per pixel
       the % 96 is to make the wheel cycle around*/
     strip.setPixelColor(i, Wheel( ((i * 256 / strip.numPixels()) + rainbow_pos) % 256) );
   }
