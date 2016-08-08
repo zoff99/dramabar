@@ -13,7 +13,7 @@
 
 #define BUTTON_LIGHT_BORDER_UP 255    //intensity of the button light (upper border). possible values: 0-255
 #define BUTTON_LIGHT_BORDER_DOWN 50   //intensity of the button light (lower border). possible values: 0-255. ATTENTION: UPPER BORDER __MUST__ BE HIGHER THAN LOWER BORDER
-#define BUTTON_OFF_INACT 0            //Dictates, whether the button light should be off during it being inactive, or only off during the button being pushed
+#define BUTTON_OFF_INACT 1            //Dictates, whether the button light should be off during it being inactive, or only off during the button being pushed
 
 #define REDFADE_BORDER_UP 255         //see BUTTON_LIGHT_BORDER_UP for more information
 #define REDFADE_BORDER_DOWN 30        //see BUTTON_LIGHT_BORDER_DOWN for more information
@@ -99,6 +99,7 @@ void loop() {
     if (currentPos == 15) return;
     currentPos = mood_up(currentPos);
     //Turns the button light off while it is being pushed
+    digitalWrite(ledPin1, LOW);
     digitalWrite(ledPin2, LOW);
   }
   else if (!digitalRead(buttonPin1) && tdelta(now, button_prev) > expButton) {
@@ -112,6 +113,7 @@ void loop() {
     currentPos = mood_dn(currentPos);
     //Turns the button light off while it is being pushed
     digitalWrite(ledPin1, LOW);
+    digitalWrite(ledPin2, LOW);
   }
 
   //resets mood normalization, so that it won't normalize instantly after leaving the neutral state (currentPos == 7)
@@ -131,21 +133,23 @@ void loop() {
     redFade(currentPos + 1);
   }
 
+  //Sets the button lights to on while not being pressed, or while not being pressed and not inactive (dictated by BUTTON_OFF_INACT)
+  if (digitalRead(buttonPin2) && (tdelta(now, button_prev) > expButton || !BUTTON_OFF_INACT)) {
+    digitalWrite(ledPin2, HIGH);
+    digitalWrite(ledPin1, HIGH);
+  }
+  if (digitalRead(buttonPin1) && (tdelta(now, button_prev) > expButton || !BUTTON_OFF_INACT)) {
+    digitalWrite(ledPin2, HIGH);
+    digitalWrite(ledPin1, HIGH);
+  }
+
   //animates the buttons, STOPANIM dictates whether the fading should stop during the (default) 10sec button inactivity after a button press
   if ((STOPANIM && tdelta(now, button_prev) <= expButton) || !BUTTONS_ANIMATE) {
-    return;
   } else {
     fadeLed(ledPin1);
     fadeLed(ledPin2);
   }
 
-  //Sets the button lights to on while not being pressed, or while not being pressed and not inactive (dictated by BUTTON_OFF_INACT)
-  if (digitalRead(buttonPin2) && (tdelta(now, button_prev) > expButton || !BUTTON_OFF_INACT)) {
-    digitalWrite(ledPin2, HIGH);
-  }
-  if (digitalRead(buttonPin1) && (tdelta(now, button_prev) > expButton || !BUTTON_OFF_INACT)) {
-    digitalWrite(ledPin1, HIGH);
-  }
 }
 
 //Time functions
