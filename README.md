@@ -19,6 +19,7 @@ TODO ESP code:
 - write interface for listening to the Adafruit for mood status (serial interface needs a logic level shifter, maybe an analog value would be easier to implement)
 - clean up and make failsafer (currently the program crashes as soon as serial data is received
 - implement password authentication (is this really required?)
+- Stretch goal: Implement "multithreaded" page loading (currently every website page has to be ONE document, because modern browser request several files at once and the webserver code is unable to account for that. Real multithreaded loading is impossible since the ESP only has one processing core)
 
 TODO Website:
 - Include animatable dramabar logo (which can be set to the actual color and mood values of the dramabar)
