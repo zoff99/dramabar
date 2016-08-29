@@ -14,6 +14,7 @@ If it reaches 15 it turns all rainbowy and the bar goes doomsday red gloomy on -
 TODO Adafruit code:
 - Code clean up
 - change the time logic from "previous time triggered" and "now" to "now" and "time for next trigger" because it solves some problems with counter manipulation
+- Make redFade function so that it takes the Sad Color instead of just red.
 
 TODO ESP code:
 - write interface for listening to the Adafruit for mood status (serial interface needs a logic level shifter, maybe an analog value would be easier to implement)
