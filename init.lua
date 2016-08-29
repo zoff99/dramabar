@@ -12,11 +12,17 @@ end]]
 
 local httpRequest={};
 httpRequest["/"]="dramabarsite.html";
+httpRequest["/home"]="dramabarsite.html";
 httpRequest["/dramabarsite.html"]="dramabarsite.html";
+httpRequest["/credits"]="credits.html";
+httpRequest["/defaults"]="dramabarsite.html";
 
 local getContentType={};
 getContentType["/"]="dramabarsite.html";
+getContentType["/home"]="dramabarsite.html";
 getContentType["/dramabarsite.html"]="dramabarsite.html";
+getContentType["/credits"]="credits.html";
+getContentType["/defaults"]="dramabarsite.hmtl";
 
 local pos = 0;
 local chunksize = 1024;
