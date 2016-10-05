@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Dramabar Settings</title>
+<style>
+:root{
+	font-size:20px;
+	font-family:Arial;
+}
+#nav li {
+	list-style: none;
+	float: left;
+	margin: 1rem 2.5rem;
+	flex: 1 1 auto;
+}
+
+#nav {
+	display: flex;
+	flex-wrap: wrap;
+	margin: 0 auto;
+	width: 80%;
+	background: #000000;
+	box-shadow: 0px 0px 4px rgba(0,0,0,0.55);
+	border-radius: 3px;
+	padding: 0;
+}
+
+#menu {
+	float: right;
+	margin-right: 12.5%;
+	margin-top: 2em;
+}
+
+#content {
+	margin-left: auto;
+	margin-right: auto;
+	width: 75%;
+	display: flex;
+	flex-wrap: wrap;
+}
+
+.subcontent {
+	position: relative;
+	flex: 1 1 15rem;
+	display: flex;
+	flex-direction: column;
+	padding-left: 3%;
+	padding-right: 3%;
+}
+
+.row {
+	flex: 1 1 auto;
+	justify-content: space-between;
+	display: flex;
+}
+
+.nav_text {
+	text-decoration: none;
+	color: #ffffff;
+	font-size: 1.5rem;
+	transition: all 0.25s;
+}
+
+.nav_text:hover {
+	transform: translate(1px,2px);
+	transition: all 0.15s;
+	display: inline-block;
+	color: #98C8FA;
+}
+
+label {
+	position: relative;
+	display: inline-block;
+}
+
+.row .tooltiptext {
+	visibility: hidden;
+	opacity: 0;
+	width: 10rem;
+	font-size: 0.9rem;
+	font-weight: normal;
+	transition: all 0.35s;
+	background-color: rgba(0, 0, 0, 0.85);
+	color: #ffffff;
+	text-align: center;
+	padding: 5px 4px;
+	border-radius: 3px;
+	position: absolute;
+	z-index: 1;
+	margin-top: -4px;
+	right: 110%;
+}
+
+.row:hover .tooltiptext {
+	visibility: visible;
+	opacity: 1;
+	transition-delay: 1s;
+}
+</style>
+<script>
+</script>
+</head>
+
+<body>
+<ul id="nav">
+	<li><a class="nav_text" href="/home">Dramabar</a></li>
+	<li><a class="nav_text" href="https://metalab.at/wiki/Dramabar">Wikipage</a></li>
+	<li><a class="nav_text" href="https://github.com/Metalab/dramabar">Source on GitHub</a></li>
+	<li><a class="nav_text" href="/credits">Credits</a></li>
+</ul>
+
+<form action="/" method="POST" id="content">
+	<div class="subcontent">
+		<h2 style="text-align: center;">Colors:</h2>
+		<div class="row">
+			<label for="c_Happy">Happy Color:<span class="tooltiptext">Color for happy mood</span></label>
+			<input type="color" id="c_Happy" name="cH" value="#00FF00">
+		</div>
+		<div class="row">
+			<label for="c_Sad">Sad Color:<span class="tooltiptext">Color for sad mood</span></label>
+			<input type="color" id="c_Sad" name="cS" value="#FF0000">
+		</div>
+		<div class="row">
+			<label for="c_Cursor">Cursor Color:<span class="tooltiptext">Cursor color</span></label>
+			<input type="color" id="c_Cursor" name="cC" value="#FFFFFF">
+		</div>
+	</div>
+	<div class="subcontent">
+		<h2 style="text-align: center;">Speeds:</h2>
+		<div class="row">
+			<label for="s_Redfade">Redfade:<span class="tooltiptext">[ms]; Speed of Doomsday-red animation</span></label>
+			<input type="number" id="s_Redfade" name="sRf" value="10" max="60000" min="0">
+		</div>
+		<div class="row">
+			<label for="s_Rainbow">Rainbow:<span class="tooltiptext">[ms]; Speed of Rainbow animation</span></label>
+			<input type="number" id="s_Rainbow" name="sRb" value="15" max="60000" min="0">
+		</div>
+		<div class="row">
+			<label for="s_Button">Button Fading:<span class="tooltiptext">[ms]; Speed of Button Fading animation</span></label>
+			<input type="number" id="s_Button" name="sB" value="30" max="60000" min="0">
+		</div>
+	</div>
+	<div class="subcontent">
+		<h2 style="text-align: center;">Lightlevels:</h2>
+		<div class="row">
+			<label for="l_Redfade_UP">Redfade UP:<span class="tooltiptext">[PWM]; Upper border for Redfade brightness</span></label>
+			<input type="number" id="l_Redfade_UP" name="lRU" value="255" max="255" min="30">
+		</div>
+		<div class="row">
+			<label for="l_Redfade_LOW">Redfade LOW:<span class="tooltiptext">[PWM]; Lower border for Redfade brightness</span></label>
+			<input type="number" id="l_Redfade_LOW" name="lRL" value="30" max="255" min="0">
+		</div>
+		<div class="row">
+			<label for="l_Button_UP">Button UP:<span class="tooltiptext">[PWM]; Upper border for Button brightness</span></label>
+			<input type="number" id="l_Button_UP" name="lBU" value="255" max="255" min="0">
+		</div>
+		<div class="row">
+			<label for="l_Button_LOW">Button LOW:<span class="tooltiptext">[PWM]; Lower border for Button brightness</span></label>
+			<input type="number" id="l_Button_LOW" name="lBL" value="30" max="255" min="0">
+		</div>
+	</div>
+	<div class="subcontent">
+		<h2 style="text-align: center;">Button Logic:</h2>
+		<div class="row">
+			<label for="b_Button">Animate Buttons:<span class="tooltiptext">Turn button animations completely on or off</span></label>
+			<input type="checkbox" id="b_Button" name="bB" value="true">
+		</div>
+		<div class="row">
+			<label for="b_StopButton">Stop Button Animation:<span class="tooltiptext">Stop button animations during inactivity</span></label>
+			<input type="checkbox" id="b_StopButton" name="bSB" value="true" checked>
+		</div>
+		<div class="row">
+			<label for="b_ButtonInact">Inactivity Off:<span class="tooltiptext">Turns buttons off during inactivity</span></label>
+			<input type="checkbox" id="b_ButtonInact" name="bBIn" value="true" checked>
+		</div>
+	</div>
+	<div class="subcontent">
+		<h2 style="text-align: center;">Logic:</h2>
+		<div class="row">
+			<label for="t_Exp">Mood Expiration Time:<span class="tooltiptext">[min]; Time until mood gets reset one point</span></label>
+			<input type="number" id="t_Exp" name="tExp" value="60" max="70000" min="0">
+		</div>
+		<div class="row">
+			<label for="t_ButtonExp">Button Expiration Time:<span class="tooltiptext">[s]; How long buttons are inactive</span></label>
+			<input type="number" id="t_ButtonExp" name="tBExp" value="10" max="4000000" min="0">
+		</div>
+		<div class="row">
+			<label for="b_Debug">Debug Mode:<span class="tooltiptext">If debug mode should be turned on (Reduced cooldowns)</span></label>
+			<input type="checkbox" id="b_Debug" name="bDe" value="true">
+		</div>
+	</div>
+	<div class="subcontent" style="flex-basis: 100%; flex-flow: row; justify-content: flex-end; padding-top: 1.5rem; margin-top: 1.5rem; border-top: solid 2px black;">
+		<input style="width:130px;" type="submit" name="save" value="Save Settings">
+	</div>
+</form>
+<div class=subcontent" style="width:75%;margin:0.2em auto;">
+	<input style="width:130px;float:right;margin-right:3%;" type="button" onclick="location.href='/defaults';" value="Load Defaults"/>
+</div>
+</body>
+</html> 
