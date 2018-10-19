@@ -16,6 +16,7 @@ bool buttonOffInact = 1;      //Dictates, whether the button light should be off
 
 uint8_t l_Redfade_UP = 255;        //see l_Button_UP for more information
 uint8_t l_Redfade_LOW = 30;        //see l_Button_LOW for more information
+int8_t bar_value_set_to = 7;
 
 #define METALED true        //corrects the issue that the dramabar seems to have GRB instead of RGB LEDs
 
@@ -73,7 +74,7 @@ void setup() {
   init_display();
   now = millis();
 }
-
+ 
 unsigned long prev_debug = 0;
 
 void loop() {
@@ -103,7 +104,12 @@ void loop() {
     Serial.println(c_Happy);
     Serial.println(c_Sad);
     Serial.println(c_Cursor);*/
-    refresh_display(currentPos);
+    if ((bar_value_set_to >= 0 ) && (bar_value_set_to < 17))
+    {
+      currentPos = bar_value_set_to - 1;
+      refresh_display(currentPos);
+      mood_up(currentPos - 1);
+    }
   }
   
   //For the extreme moods
@@ -113,6 +119,7 @@ void loop() {
   if (currentPos == -1) {
     redFade(0);
   }
+
 
   // check if button was pressed and if there was enough delay since the last button press
   now = millis();
@@ -302,7 +309,10 @@ void setSettings (String key, uint32_t value) {
   else if (key == "cC") c_Cursor = correctColor(value);
   else if (key == "sRf") s_Redfade = value;
   else if (key == "sRb") s_Rainbow = value;
-  else if (key == "sB") s_Button = value;
+
+  // else if (key == "sB") s_Button = value;
+  else if (key == "sB") bar_value_set_to = value;
+
   else if (key == "lRU") l_Redfade_UP = value;
   else if (key == "lRL") l_Redfade_LOW = value;
   else if (key == "lBU") l_Button_UP = value;
