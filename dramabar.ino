@@ -106,6 +106,8 @@ void loop() {
     Serial.println(c_Cursor);*/
     if ((bar_value_set_to >= 0 ) && (bar_value_set_to < 17))
     {
+      now = millis();
+      button_prev = now;
       currentPos = bar_value_set_to - 1;
       refresh_display(currentPos);
       mood_up(currentPos - 1);
